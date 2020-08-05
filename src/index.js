@@ -35,7 +35,6 @@ async function run(config)
     core.setSecret(config.client_secret);
     core.setSecret(config.username);
     core.setSecret(config.password);
-    core.setSecret(config.subdomain);
 
     const powershellPath = await io.which('powershell', true);
     let escapedScript = pathlib
