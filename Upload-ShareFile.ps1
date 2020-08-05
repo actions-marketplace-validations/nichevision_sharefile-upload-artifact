@@ -74,4 +74,4 @@ if ($ShareParentFolderLink)
     $CopyArgs.Add('-ShareParentFolderLink', $ShareParentFolderLink)
 }
 
-Copy-ToShareFile @CopyArgs -WhatIf
+Copy-ToShareFile @CopyArgs
