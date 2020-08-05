@@ -64,32 +64,39 @@ async function run(config)
     options.listeners = {
         stdout: function(data) {
             output += data.toString();
-        },
-        stderr: function(data) {
-            output += data.toString();
         }
     }
 
-    const resultCode = await exec.exec(
-        `"${powershellPath}"`,
-        [
-            '-NoLogo',
-            '-Sta',
-            '-NoProfile',
-            '-NonInteractive',
-            '-ExecutionPolicy',
-            'Unrestricted',
-            '-Command',
-            command
-        ],
-        options
-    );
+    let resultCode = 0;
+    let processError = null;
+    
+    try
+    {
+        resultCode = await exec.exec(
+            `"${powershellPath}"`,
+            [
+                '-NoLogo',
+                '-Sta',
+                '-NoProfile',
+                '-NonInteractive',
+                '-ExecutionPolicy',
+                'Unrestricted',
+                '-Command',
+                command
+            ],
+            options
+        );
+    }
+    catch (error)
+    {
+        processError = error;
+    }
 
-    if (resultCode === 0) {
-        core.setOutput('share-url', output.trim());
+    if (processError) {
+        core.setFailed(processError);
     }
     else {
-        core.setFailed(`Upload to ShareFile failed with exit code ${resultCode}.`);
+        core.setOutput('share-url', output.trim());
     }
 }
 

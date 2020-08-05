@@ -21,14 +21,21 @@ function Connect-ShareFileClient
     $sfClient = New-Object ShareFile.Api.Client.ShareFileClient $Endpoint
     $oauthService = New-Object ShareFile.Api.Client.Security.Authentication.OAuth2.OAuthService ($sfClient, $ClientID, $ClientSecret)
 
-    $task = $oauthService.PasswordGrantAsync($Username, $Password, $Subdomain, $ApplicationControlPlane)
-    $task.Wait()
+    try
+    {
+        $task = $oauthService.PasswordGrantAsync($Username, $Password, $Subdomain, $ApplicationControlPlane)
+        $task.Wait()
 
-    $oauthToken = $task.Result
-    $sfClient.AddOAuthCredentials($oauthToken)
-    $sfClient.BaseUri = $oauthToken.GetUri()
-    $sfClient.Sessions.Login().Execute() | Out-Null
-    return $sfClient
+        $oauthToken = $task.Result
+        $sfClient.AddOAuthCredentials($oauthToken)
+        $sfClient.BaseUri = $oauthToken.GetUri()
+        $sfClient.Sessions.Login().Execute() | Out-Null
+        return $sfClient
+    }
+    catch
+    {
+        throw
+    }
 }
 
 function Setup-ShareFile
@@ -102,6 +109,9 @@ function Copy-ToShareFile
     $share.Items = New-Object System.Collections.Generic.List[ShareFile.Api.Client.Models.Item]
 
     $Files | ForEach-Object {
+        # Get-Item below does not throw an error if the item does not exist and $Exclude has a value, so
+        # we call it here separately to allow the error to raise.
+        Get-Item $_ -ErrorAction Stop | Out-Null
         foreach ($FileToUpload in (Get-Item $_ -Exclude $Exclude))
         {
             $IsDirectory = [bool]($FileToUpload.Attributes -band [System.IO.FileAttributes]::Directory)

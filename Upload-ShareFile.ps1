@@ -57,21 +57,29 @@ param(
 $UtilsScript = Join-Path $PSScriptRoot ShareFile-Utils.ps1
 . $UtilsScript
 
-$ShareFileClient = Connect-ShareFileClient -ClientID $ClientID -ClientSecret $ClientSecret -Username $Username -Password $Password -Subdomain $Subdomain -ApplicationControlPlane $ApplicationControlPlane -Endpoint $Endpoint
-
-$CopyArgs = @{
-    '-ShareFileClient'=$ShareFileClient;
-    '-DestinationDirectory'=$DestinationDirectory;
-    '-ExpirationDate'=$ExpirationDate;
-    '-Files'=$Files
-}
-if ($Exclude)
+try
 {
-    $CopyArgs.Add('-Exclude', $Exclude)
-}
-if ($ShareParentFolderLink)
-{
-    $CopyArgs.Add('-ShareParentFolderLink', $ShareParentFolderLink)
-}
+    $ShareFileClient = Connect-ShareFileClient -ClientID $ClientID -ClientSecret $ClientSecret -Username $Username -Password $Password -Subdomain $Subdomain -ApplicationControlPlane $ApplicationControlPlane -Endpoint $Endpoint
 
-Copy-ToShareFile @CopyArgs
+    $CopyArgs = @{
+        '-ShareFileClient'=$ShareFileClient;
+        '-DestinationDirectory'=$DestinationDirectory;
+        '-ExpirationDate'=$ExpirationDate;
+        '-Files'=$Files
+    }
+    if ($Exclude)
+    {
+        $CopyArgs.Add('-Exclude', $Exclude)
+    }
+    if ($ShareParentFolderLink)
+    {
+        $CopyArgs.Add('-ShareParentFolderLink', $ShareParentFolderLink)
+    }
+
+    Copy-ToShareFile @CopyArgs
+}
+catch [System.AggregateException]
+{
+    $_.Exception.ToString() | Out-Host
+    throw
+}
