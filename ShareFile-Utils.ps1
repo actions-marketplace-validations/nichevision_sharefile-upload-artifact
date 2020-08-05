@@ -33,11 +33,7 @@ function Connect-ShareFileClient
 
 function Setup-ShareFile
 {
-    $DllPath = ".\lib\netstandard1.3\ShareFile.Api.Client.dll"
-    if (!(Test-Path $DllPath))
-    {
-        nuget install ShareFile.Api.Client -OutputDirectory ".\packages\"
-    }
+    $DllPath = Join-Path $PSScriptRoot ".\lib\netstandard1.3\ShareFile.Api.Client.dll"
     Add-Type -Path $DllPath -ErrorAction Stop
 }
 
