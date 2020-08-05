@@ -4,6 +4,9 @@ inputs:
   path:
     description: 'Artifacts to upload.'
     required: true
+  exclude:
+    description: 'Paths to exclude from upload. Uses Powershell pattern rules.'
+    required: false
   destination:
     description: 'ShareFile destination to upload to.'
     required: true

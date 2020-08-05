@@ -4,6 +4,7 @@ class Config {
     constructor()
     {
         this.path = '';
+        this.exclude = '';
         this.destination = '';
         this.client_id = '';
         this.client_secret = '';
@@ -21,6 +22,7 @@ module.exports = {
     loadConfigFromInputs: function() {
         cfg = new Config;
         cfg.path = core.getInput("path");
+        cfg.exclude = core.getInput("exclude");
         cfg.destination = core.getInput("destination");
         cfg.client_id = core.getInput("client-id");
         cfg.client_secret = core.getInput("client-secret");

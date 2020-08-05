@@ -3,30 +3,31 @@ const github = require('@actions/github');
 const exec = require('@actions/exec');
 const io = require('@actions/io');
 const pathlib = require('path');
-const glob = require('@actions/glob');
 const fs = require('fs');
 const cfg = require("./config");
 
-function walk(dir) {
-    function _walk(dir, fileList) 
+const IS_WINDOWS = process.platform === 'win32'
+
+function processPath(patterns)
+{
+    const result = [];
+    if (IS_WINDOWS) 
     {
-        const files = fs.readdirSync(dir);
-        for (const file of files) 
-        {
-            const path = pathlib.join(dir, file);
-            const stat = fs.lstatSync(path);
-            if (stat.isDirectory()) 
-            {
-                fileList = _walk(path, fileList);
-            } 
-            else 
-            {
-                fileList.push(path);
-            }
-        }
-        return fileList;
+        patterns = patterns.replace(/\r\n/g, '\n')
+        patterns = patterns.replace(/\r/g, '\n')
     }
-    return _walk(dir, []);
+    const lines = patterns.split('\n').map(x => x.trim())
+    for (const line of lines) {
+      // Empty or comment
+      if (!line || line.startsWith('#')) {
+        continue
+      }
+      // Pattern
+      else {
+        result.push(line)
+      }
+    }
+    return result;
 }
 
 async function run(config)
@@ -41,19 +42,9 @@ async function run(config)
         .join(__dirname, '..', 'Upload-Sharefile.ps1')
         .replace(/'/g, "''");
 
-    const globber = await glob.create(config.path);
-    const results = await globber.glob();
-    const filesToUpload = [];
-    for (const path of results)
-    {
-        const stat = fs.lstatSync(path);
-        if (!stat.isDirectory()) 
-        {
-            filesToUpload.push('"'+path+'"');
-        }
-    }
-
-    const filesToUploadPwshList = "@(" + filesToUpload.join(';') + ")";
+    const filesToUpload = processPath(config.path);
+    const formattedFiles = filesToUpload.map(x => `"${x}"`);
+    const filesToUploadPwshList = "@(" + formattedFiles.join(';') + ")";
 
     let command = `& '${escapedScript}'\
      -ClientID '${config.client_id}'\
@@ -64,7 +55,8 @@ async function run(config)
      -ApplicationControlPlane '${config.application_control_plane}'\
      -ShareParentFolderLink\
      -DestinationDirectory '${config.destination}'\
-     -Files ${filesToUploadPwshList}`;
+     -Files ${filesToUploadPwshList}\
+     -Exclude '${config.exclude}'`;
 
     let output = '';
 

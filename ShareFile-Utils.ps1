@@ -39,45 +39,60 @@ function Setup-ShareFile
 
 function Copy-ToShareFile
 {
+    <#
+        .SYNOPSIS
+        Copy one or more file or directories to a destination on ShareFile.
+
+        .PARAMETER ShareFileClient
+        The ShareFile client with authorization to upload files, create folders, and create
+        a Share at the specified destination.
+
+        .PARAMETER Destination
+        The directory name on ShareFile where files will be uploaded to.
+
+        .PARAMETER ShareParentFolderLink
+        If specified, the Share link that is created will point directly to DestinationDirectory,
+        instead of to the individually uploaded files. This means the directory structure will be
+        displayed in the share.
+
+        .PARAMETER ExpirationDate
+        The expiration date of the created Share. The default of [datetime]::MaxValue means
+        the Share does not expire.
+
+        .PARAMETER Files
+        A collection of files and/or directories to upload.
+
+        Directories are uploaded as-is, preserving their name and entire structure to DestinationDirectory.
+
+        Individual files are uploaded directly to DestinationDirectory, without preserving their parent
+        directories.
+
+        .PARAMETER Exclude
+        A collection of strings used to exclude files. Supports typical powershell wildcards.
+    #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory=$true)]
         [ShareFile.Api.Client.ShareFileClient] $ShareFileClient,
 
-        [string] $SourceDirectory,
+        [Parameter(Mandatory=$true)]
+        $Files,
 
         [Parameter(Mandatory=$true)]
         [string] $DestinationDirectory,
 
         [switch] $ShareParentFolderLink,
 
-        [string[]] $Include,
-
-        [string[]] $Exclude,
-
         [datetime] $ExpirationDate = [datetime]::MaxValue,
 
-        $Files
+        [System.String[]] $Exclude
     )
+
     Setup-ShareFile | Out-Null
 
     if ($null -eq $Files) 
     {
-        $SourceDirectory = (Get-Item $SourceDirectory).FullName
-        $Files = Get-ChildItem -Recurse $SourceDirectory -Exclude $Exclude -Include $Include -File
-    }
-    else
-    {
-        # If it's a list of strings, turn them into System.IO.FileInfos
-        if ($Files[0].GetType() -eq [System.String])
-        {
-            $Files = Get-ChildItem $Files
-        }
-    }
-
-    if (!$Files)
-    {
-        throw "No files were specified or source directory is empty."
+        throw "No files were specified.";
     }
 
     $share = New-Object ShareFile.Api.Client.Models.Share
@@ -87,72 +102,33 @@ function Copy-ToShareFile
     $share.Items = New-Object System.Collections.Generic.List[ShareFile.Api.Client.Models.Item]
 
     $Files | ForEach-Object {
-        $FileToUpload = $_
-        if ($SourceDirectory)
+        foreach ($FileToUpload in (Get-Item $_ -Exclude $Exclude))
         {
-            $SubPath = $FileToUpload.FullName.Replace($SourceDirectory, '')
-        }
-        else
-        {
-            $SubPath = $FileToUpload.FullName.Replace((Get-Location).Path, '')
-        }
-        $FullDstPath = Join-Path $DestinationDirectory $SubPath
-
-        if ($pscmdlet.ShouldProcess("Upload $($_.FullName) to $($FullDstPath).", "", "")) {
-            # Create required directories
-            $tmp = $FullDstPath
-            $dirs = New-Object System.Collections.ArrayList
-            while ($tmp)
+            $IsDirectory = [bool]($FileToUpload.Attributes -band [System.IO.FileAttributes]::Directory)
+            
+            if ($IsDirectory)
             {
-                $tmp = [System.IO.Path]::GetDirectoryName($tmp)
-                if ($tmp)
+                $SubFiles = Get-ChildItem -r $FileToUpload -File -Exclude $Exclude
+                foreach ($f in $SubFiles)
                 {
-                    $dirs.Add($tmp) | Out-Null
+                    $UploadedFile = Upload-ToShareFile -File $f -PreserveRelativeTo $FileToUpload.Parent -DestinationDirectory $DestinationDirectory        
+                    if (!$ShareParentFolderLink)
+                    {
+                        $shareItem = New-Object ShareFile.Api.Client.Models.Item
+                        $shareItem.Id = $UploadedFile.Id
+                        $share.Items.Add($shareItem)
+                    }
                 }
             }
-            $dirs.Reverse()
-            $ParentDirItem = $ShareFileClient.Items.ByPath("/").Execute()
-            foreach ($dir in $dirs)
+            else
             {
-                $dir = $dir.Replace("\", "/")
-                try
-                {
-                    $ParentDirItem = $ShareFileClient.Items.ByPath($dir).Execute()
-                }
-                catch [ShareFile.Api.Client.Exceptions.ODataException]
-                {
-                    $folder = New-Object ShareFile.Api.Client.Models.Folder 
-                    $folder.Name = $dir.Split("/")[-1]
-                    Write-Verbose "Creating directory `"$($folder.Name)`" on ShareFile."
-                    $ParentDirItem = $ShareFileClient.Items.CreateFolder($ParentDirItem.Url, $folder, $false).execute()
-                }
-            }
-
-            # Can't copy to a file path. Must be a directory path.
-            $FullDstDir = [System.IO.Path]::GetDirectoryName($FullDstPath)
-            $FullDstDir = $FullDstDir.Replace("\", "/")
-
-            $UploadRequest = New-Object ShareFile.Api.Client.Transfers.UploadSpecificationRequest
-            $UploadRequest.FileName = $FileToUpload.Name
-            $UploadRequest.FileSize = $FileToUpload.Length
-            $UploadRequest.Parent = $ParentDirItem.Url
-
-            $stream = $FileToUpload.OpenRead()
-            try
-            {
-                $Uploader = $ShareFileClient.GetFileUploader($UploadRequest, $stream)
-                $UploadedFile = $Uploader.Upload()
-
+                $UploadedFile = Upload-ToShareFile -File $FileToUpload -DestinationDirectory $DestinationDirectory
                 if (!$ShareParentFolderLink)
                 {
                     $shareItem = New-Object ShareFile.Api.Client.Models.Item
                     $shareItem.Id = $UploadedFile.Id
                     $share.Items.Add($shareItem)
                 }
-            }
-            finally
-            {
-                $stream.Close()
             }
         }
     }
@@ -170,5 +146,99 @@ function Copy-ToShareFile
     if ($pscmdlet.ShouldProcess("Create public share link on ShareFile.", "", "")) {
         $ShareResult = $ShareFileClient.Shares.Create($share).Execute()
         $ShareResult.Uri.AbsoluteUri
+    }
+}
+
+function Upload-ToShareFile {
+    <#
+        .SYNOPSIS
+        Upload a file to a directory on ShareFile.
+
+        .PARAMETER File
+        The file to upload. Must be a file, and not a directory.
+
+        .PARAMETER PreserveRelativeTo
+        If not specified, the File is uploaded directly to Destination, without
+        preserving subdirectories.
+        
+        If specified, the directories containing File will be preserved in the
+        destination, not including the name of $PreserveRelativeTo.
+
+        .PARAMETER DestinationDirectory
+        The directory on ShareFile to upload File to.
+    #>
+    param(
+        [Parameter(Mandatory=$true)]
+        [System.IO.FileInfo] $File,
+        [System.IO.DirectoryInfo] $PreserveRelativeTo,
+        [string] $DestinationDirectory
+    )
+    if ($PreserveRelativeTo)
+    {
+        $Name = $File.FullName.Replace($PreserveRelativeTo.FullName, '')
+    }
+    else
+    {
+        $Name = $File.Name
+    }
+
+    $FullDstPath = Join-Path $DestinationDirectory $Name
+
+    # Create required directories
+    $tmp = $FullDstPath
+    $dirs = New-Object System.Collections.ArrayList
+    while ($tmp)
+    {
+        $tmp = [System.IO.Path]::GetDirectoryName($tmp)
+        if ($tmp)
+        {
+            $dirs.Add($tmp) | Out-Null
+        }
+    }
+    $dirs.Reverse()
+    $ParentDirItem = $ShareFileClient.Items.ByPath("/").Execute()
+    foreach ($dir in $dirs)
+    {
+        $dir = $dir.Replace("\", "/")
+        try
+        {
+            $ParentDirItem = $ShareFileClient.Items.ByPath($dir).Execute()
+        }
+        catch [ShareFile.Api.Client.Exceptions.ODataException]
+        {
+            $folder = New-Object ShareFile.Api.Client.Models.Folder 
+            $folder.Name = $dir.Split("/")[-1]
+            if ($pscmdlet.ShouldProcess("Create destination directory $dir.", "", "")) {
+                $ParentDirItem = $ShareFileClient.Items.CreateFolder($ParentDirItem.Url, $folder, $false).execute()
+            }
+        }
+    }
+
+    $UploadRequest = New-Object ShareFile.Api.Client.Transfers.UploadSpecificationRequest
+    $UploadRequest.FileName = $File.Name
+    $UploadRequest.FileSize = $File.Length
+    $UploadRequest.Parent = $ParentDirItem.Url
+
+    if ($pscmdlet.ShouldProcess("Upload $($File.FullName) to $FullDstPath.", "", "")) {
+
+        $stream = $File.OpenRead()
+        try
+        {
+            $Uploader = $ShareFileClient.GetFileUploader($UploadRequest, $stream)
+            $UploadedFile = $Uploader.Upload()
+
+            if (!$ShareParentFolderLink)
+            {
+                $shareItem = New-Object ShareFile.Api.Client.Models.Item
+                $shareItem.Id = $UploadedFile.Id
+                $share.Items.Add($shareItem)
+            }
+            
+            $UploadedFile
+        }
+        finally
+        {
+            $stream.Close()
+        }
     }
 }

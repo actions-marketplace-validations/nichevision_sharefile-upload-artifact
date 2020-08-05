@@ -10,7 +10,8 @@ steps
     with:
         path: |
          build/*.dll
-         !build/*.pdb
+         build/*.config
+        exclude: *.pdb
         destination: releases/
         client-id: ${{ secrets.SHAREFILE_CLIENT_ID }}
         client-secret: ${{ secrets.SHAREFILE_CLIENT_SECRET }}
