@@ -1,0 +1,34 @@
+name: 'Upload a Build Artifact to Cisco ShareFile'
+author: 'tfaris'
+inputs:
+  path:
+    description: 'Artifacts to upload.'
+    required: true
+  destination:
+    description: 'ShareFile destination to upload to.'
+    required: true
+  client-id:
+    description: 'ShareFile API Client ID'
+    required: true
+  client-secret:
+    description: 'ShareFile API Client Secret'
+    required: true
+  username:
+    description: 'ShareFile username'
+    required: true
+  password:
+    description: 'ShareFile password'
+    required: true
+  subdomain:
+    description: 'ShareFile company subdomain'
+    required: true
+  application-control-plane:
+    description: 'Describes the domain that the ShareFile account is available on. For example: sharefile.com, securevdr.com, sharefile.eu, etc'
+    required: false
+    default: 'sharefile.com'
+outputs:
+  share-url:
+    description: 'URL share link for the Destination path.'
+runs:
+  using: 'node12'
+  main: 'dist/index.js'

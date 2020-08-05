@@ -1,0 +1,20 @@
+{
+  "name": "sharefile-upload-artifact",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "compile": "ncc build src/index.js -o dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.2.4",
+    "@actions/exec": "^1.0.4",
+    "@actions/github": "^4.0.0",
+    "@actions/glob": "^0.1.0",
+    "@actions/io": "^1.0.2",
+    "@zeit/ncc": "^0.22.3"
+  }
+}
