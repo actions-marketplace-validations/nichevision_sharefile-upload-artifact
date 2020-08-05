@@ -13,7 +13,7 @@ steps
          !build/*.pdb
         destination: releases/
         client-id: ${{ secrets.SHAREFILE_CLIENT_ID }}
-        client-secret: ${{ secrets.SHAREFILE_CLIENT_PASSWORD }}
+        client-secret: ${{ secrets.SHAREFILE_CLIENT_SECRET }}
         username: ${{ secrets.SHAREFILE_USERNAME }}
         password: ${{ secrets.SHAREFILE_PASSWORD }}
         subdomain: 'mycompany'
