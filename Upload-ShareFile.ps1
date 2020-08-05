@@ -30,7 +30,8 @@ param(
     $Files
 )
 
-. .\ShareFile-Utils.ps1
+$UtilsScript = Join-Path $PSScriptRoot ShareFile-Utils.ps1
+. $UtilsScript
 
 $ShareFileClient = Connect-ShareFileClient -ClientID $ClientID -ClientSecret $ClientSecret -Username $Username -Password $Password -Subdomain $Subdomain -ApplicationControlPlane $ApplicationControlPlane -Endpoint $Endpoint
 
