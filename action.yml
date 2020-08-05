@@ -1,4 +1,4 @@
-name: 'Upload a Build Artifact to Cisco ShareFile'
+name: 'Upload a Build Artifact to Citrix ShareFile'
 author: 'tfaris'
 inputs:
   path:
