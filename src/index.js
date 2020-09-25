@@ -60,7 +60,8 @@ async function run(config)
      -ShareParentFolderLink\
      -DestinationDirectory '${config.destination}'\
      -Files ${filesToUploadPwshList}\
-     -Exclude '${config.exclude}'`;
+     -Exclude '${config.exclude}'\
+     -ErrorAction Stop`;
 
     let output = '';
 
