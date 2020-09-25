@@ -46,6 +46,10 @@ async function run(config)
     const formattedFiles = filesToUpload.map(x => `"${x}"`);
     const filesToUploadPwshList = "@(" + formattedFiles.join(';') + ")";
 
+    if (config.application_control_plane === "") {
+        config.application_control_plane = "sharefile.com";
+    }
+
     let command = `& '${escapedScript}'\
      -ClientID '${config.client_id}'\
      -ClientSecret '${config.client_secret}'\
