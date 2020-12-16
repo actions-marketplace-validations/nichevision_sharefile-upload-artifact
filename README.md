@@ -20,6 +20,25 @@ steps
         subdomain: 'mycompany'
 ```
 
+Exclude multiple paths
+```yaml
+steps
+    - uses: nichevision/sharefile-upload-artifact@v1
+    with:
+        path: |
+         build/*.dll
+         build/*.config
+        exclude: |
+          *.pdb
+          *.xml
+        destination: releases/
+        client-id: ${{ secrets.SHAREFILE_CLIENT_ID }}
+        client-secret: ${{ secrets.SHAREFILE_CLIENT_SECRET }}
+        username: ${{ secrets.SHAREFILE_USERNAME }}
+        password: ${{ secrets.SHAREFILE_PASSWORD }}
+        subdomain: 'mycompany'
+```
+
 ## Outputs
 
 ### `share-url`

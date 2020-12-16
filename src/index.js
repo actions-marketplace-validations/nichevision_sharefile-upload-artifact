@@ -30,6 +30,13 @@ function processPath(patterns)
     return result;
 }
 
+function formatAsPowershellList(stringArg)
+{
+    var asList = processPath(stringArg);
+    var quoted = asList.map(x => `"${x}"`);
+    return "@(" + quoted.join(';') + ")";
+}
+
 async function run(config)
 {
     core.setSecret(config.client_id);
@@ -42,9 +49,8 @@ async function run(config)
         .join(__dirname, '..', 'Upload-Sharefile.ps1')
         .replace(/'/g, "''");
 
-    const filesToUpload = processPath(config.path);
-    const formattedFiles = filesToUpload.map(x => `"${x}"`);
-    const filesToUploadPwshList = "@(" + formattedFiles.join(';') + ")";
+    const filesToUploadPwshList = formatAsPowershellList(config.path);
+    const filesToExcludePwshList = formatAsPowershellList(config.exclude || "");
 
     if (config.application_control_plane === "") {
         config.application_control_plane = "sharefile.com";
@@ -60,7 +66,7 @@ async function run(config)
      -ShareParentFolderLink\
      -DestinationDirectory '${config.destination}'\
      -Files ${filesToUploadPwshList}\
-     -Exclude '${config.exclude}'\
+     -Exclude ${filesToExcludePwshList}\
      -ErrorAction Stop`;
 
     let output = '';
