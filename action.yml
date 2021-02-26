@@ -1,4 +1,5 @@
 name: 'Upload a Build Artifact to Citrix ShareFile'
+description: 'Upload build artifacts to a specified destination on ShareFile.'
 author: 'tfaris'
 inputs:
   path:
