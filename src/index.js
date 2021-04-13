@@ -56,6 +56,10 @@ async function run(config)
         config.application_control_plane = "sharefile.com";
     }
 
+    if (config.timeout === "") {
+        config.timeout = 120000;
+    }
+
     let command = `& '${escapedScript}'\
      -ClientID '${config.client_id}'\
      -ClientSecret '${config.client_secret}'\
@@ -65,6 +69,7 @@ async function run(config)
      -ApplicationControlPlane '${config.application_control_plane}'\
      -ShareParentFolderLink\
      -DestinationDirectory '${config.destination}'\
+     -Timeout ${config.timeout}\
      -Files ${filesToUploadPwshList}\
      -Exclude ${filesToExcludePwshList}\
      -ErrorAction Stop`;

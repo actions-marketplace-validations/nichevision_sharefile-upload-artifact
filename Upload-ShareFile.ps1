@@ -25,8 +25,11 @@
     .PARAMETER ExpirationDate
     The expiration date of the created Share. The default of [datetime]::MaxValue means
     the Share does not expire.
+
+    .PARAMETER Timeout
+    Http response timeout in milliseconds.
 #>
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess=$True)]
 param(
     [Parameter(Mandatory=$True)]
     [string] $ClientID,
@@ -51,7 +54,9 @@ param(
 
     [string] $ApplicationControlPlane = "sharefile.com",
 
-    [string] $Endpoint = "https://secure.sf-api.com/sf/v3/"
+    [string] $Endpoint = "https://secure.sf-api.com/sf/v3/",
+
+    [int] $Timeout = 120000
 )
 
 $UtilsScript = Join-Path $PSScriptRoot ShareFile-Utils.ps1
@@ -74,6 +79,10 @@ try
     if ($ShareParentFolderLink)
     {
         $CopyArgs.Add('-ShareParentFolderLink', $ShareParentFolderLink)
+    }
+    if ($Timeout)
+    {
+        $CopyArgs.Add('-Timeout', $Timeout)
     }
 
     Copy-ToShareFile @CopyArgs

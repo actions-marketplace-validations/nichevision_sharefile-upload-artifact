@@ -76,6 +76,9 @@ function Copy-ToShareFile
 
         .PARAMETER Exclude
         A collection of strings used to exclude files. Supports typical powershell wildcards.
+        
+        .PARAMETER Timeout
+        Http response timeout in milliseconds.
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
@@ -92,7 +95,9 @@ function Copy-ToShareFile
 
         [datetime] $ExpirationDate = [datetime]::MaxValue,
 
-        [System.String[]] $Exclude
+        [System.String[]] $Exclude,
+
+        [int] $Timeout = 120000
     )
 
     Setup-ShareFile | Out-Null
@@ -121,7 +126,7 @@ function Copy-ToShareFile
                 $SubFiles = Get-ChildItem -r $FileToUpload -File -Exclude $Exclude
                 foreach ($f in $SubFiles)
                 {
-                    $UploadedFile = Upload-ToShareFile -File $f -PreserveRelativeTo $FileToUpload.Parent -DestinationDirectory $DestinationDirectory        
+                    $UploadedFile = Upload-ToShareFile -File $f -PreserveRelativeTo $FileToUpload.Parent -DestinationDirectory $DestinationDirectory -Timeout $Timeout
                     if (!$ShareParentFolderLink)
                     {
                         $shareItem = New-Object ShareFile.Api.Client.Models.Item
@@ -132,7 +137,7 @@ function Copy-ToShareFile
             }
             else
             {
-                $UploadedFile = Upload-ToShareFile -File $FileToUpload -DestinationDirectory $DestinationDirectory
+                $UploadedFile = Upload-ToShareFile -File $FileToUpload -DestinationDirectory $DestinationDirectory -Timeout $Timeout
                 if (!$ShareParentFolderLink)
                 {
                     $shareItem = New-Object ShareFile.Api.Client.Models.Item
@@ -176,12 +181,16 @@ function Upload-ToShareFile {
 
         .PARAMETER DestinationDirectory
         The directory on ShareFile to upload File to.
+
+        .PARAMETER Timeout
+        Http response timeout in milliseconds.
     #>
     param(
         [Parameter(Mandatory=$true)]
         [System.IO.FileInfo] $File,
         [System.IO.DirectoryInfo] $PreserveRelativeTo,
-        [string] $DestinationDirectory
+        [string] $DestinationDirectory,
+        [int] $Timeout = 120000
     )
     if ($PreserveRelativeTo)
     {
@@ -229,12 +238,20 @@ function Upload-ToShareFile {
     $UploadRequest.FileSize = $File.Length
     $UploadRequest.Parent = $ParentDirItem.Url
 
+    $Config = New-Object ShareFile.Api.Client.Transfers.Uploaders.FileUploaderConfig
+    $Config.HttpTimeout = $Timeout
+
     if ($pscmdlet.ShouldProcess("Upload $($File.FullName) to $FullDstPath.", "", "")) {
 
         $stream = $File.OpenRead()
         try
         {
-            $Uploader = $ShareFileClient.GetFileUploader($UploadRequest, $stream)
+            $Uploader = $ShareFileClient.GetFileUploader(
+                $UploadRequest,
+                $stream,
+                $Config,
+                $null
+            )
             $UploadedFile = $Uploader.Upload()
 
             if (!$ShareParentFolderLink)

@@ -11,6 +11,10 @@ inputs:
   destination:
     description: 'ShareFile destination to upload to.'
     required: true
+  timeout:
+    description: 'Http upload request timeout in milliseconds.'
+    required: false
+    default: 120000
   client-id:
     description: 'ShareFile API Client ID'
     required: true

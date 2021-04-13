@@ -5056,6 +5056,7 @@ class Config {
         this.path = '';
         this.exclude = '';
         this.destination = '';
+        this.timeout = '';
         this.client_id = '';
         this.client_secret = '';
         this.username = '';
@@ -5074,6 +5075,7 @@ module.exports = {
         cfg.path = core.getInput("path");
         cfg.exclude = core.getInput("exclude");
         cfg.destination = core.getInput("destination");
+        cfg.timeout = core.getInput("timeout");
         cfg.client_id = core.getInput("client-id");
         cfg.client_secret = core.getInput("client-secret");
         cfg.username = core.getInput("username");
@@ -5357,6 +5359,10 @@ async function run(config)
         config.application_control_plane = "sharefile.com";
     }
 
+    if (config.timeout === "") {
+        config.timeout = 120000;
+    }
+
     let command = `& '${escapedScript}'\
      -ClientID '${config.client_id}'\
      -ClientSecret '${config.client_secret}'\
@@ -5366,6 +5372,7 @@ async function run(config)
      -ApplicationControlPlane '${config.application_control_plane}'\
      -ShareParentFolderLink\
      -DestinationDirectory '${config.destination}'\
+     -Timeout ${config.timeout}\
      -Files ${filesToUploadPwshList}\
      -Exclude ${filesToExcludePwshList}\
      -ErrorAction Stop`;
